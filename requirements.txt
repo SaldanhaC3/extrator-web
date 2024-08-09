@@ -1,5 +1,5 @@
-pandas
-selenium
 streamlit
-chromedriver-autoinstaller
+pandas
+requests
 beautifulsoup4
+openpyxl
