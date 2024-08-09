@@ -1,11 +1,10 @@
 { pkgs }: {
   deps = [
+    pkgs.geckodriver
+    pkgs.glibcLocales
     pkgs.python310Full
-    pkgs.streamlit
+    pkgs.poetry
+    pkgs.chromedriver
+    pkgs.chromium
   ];
-
-  # Isso faz com que o Replit rode o Streamlit na porta 8501 automaticamente
-  postBuild = ''
-    streamlit run app.py --server.port 8501
-  '';
 }
