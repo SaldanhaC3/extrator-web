@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
+from requests_html import HTMLSession
 from urllib.parse import urlparse
 import io
 
@@ -13,25 +12,25 @@ def is_valid_url(url):
     except ValueError:
         return False
 
-# Função para extrair dados das URLs
+# Função para extrair dados das URLs com JavaScript renderizado
 def extract_data(urls):
+    session = HTMLSession()
     titles = []
     meta_descriptions = []
 
     for url in urls:
         try:
-            response = requests.get(url)
-            response.raise_for_status()  # Verifica se a requisição foi bem-sucedida
-            soup = BeautifulSoup(response.content, 'html.parser')
+            response = session.get(url)
+            response.html.render(timeout=20)  # Renderiza o JavaScript
 
             # Extrai o título da página
-            title = soup.title.string if soup.title else 'Título não encontrado'
+            title = response.html.find('title', first=True).text if response.html.find('title', first=True) else 'Título não encontrado'
 
             # Extrai a meta descrição
-            meta = soup.find('meta', attrs={'name': 'description'})
-            meta_description = meta['content'] if meta else 'Meta description não encontrada'
+            meta = response.html.find('meta[name="description"]', first=True)
+            meta_description = meta.attrs['content'] if meta else 'Meta description não encontrada'
 
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             title = f'ERROR: {str(e)}'
             meta_description = 'N/A'
 
@@ -71,7 +70,7 @@ if st.button("Extrair Informações"):
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Resultados')
-        buffer.seek(0)  # Mova o ponteiro para o início do arquivo
+        buffer.seek(0)
 
         st.download_button(
             label="📥 Baixar Resultados",
