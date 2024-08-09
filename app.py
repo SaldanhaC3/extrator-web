@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
-from requests_html import HTMLSession
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+import chromedriver_autoinstaller
 from urllib.parse import urlparse
 import io
 
@@ -12,23 +15,28 @@ def is_valid_url(url):
     except ValueError:
         return False
 
-# Função para extrair dados das URLs com JavaScript renderizado
+# Função para extrair dados das URLs
 def extract_data(urls):
-    session = HTMLSession()
+    chromedriver_autoinstaller.install()  # Instala o Chromedriver automaticamente
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    service = Service()
+    driver = webdriver.Chrome(service=service, options=options)
+
     titles = []
     meta_descriptions = []
 
     for url in urls:
         try:
-            response = session.get(url)
-            response.html.render(timeout=20)  # Renderiza o JavaScript
-
-            # Extrai o título da página
-            title = response.html.find('title', first=True).text if response.html.find('title', first=True) else 'Título não encontrado'
-
-            # Extrai a meta descrição
-            meta = response.html.find('meta[name="description"]', first=True)
-            meta_description = meta.attrs['content'] if meta else 'Meta description não encontrada'
+            driver.get(url)
+            driver.implicitly_wait(10)
+            title = driver.title
+            try:
+                meta_description = driver.find_element(By.CSS_SELECTOR, "meta[name='description']").get_attribute("content")
+            except:
+                meta_description = 'Meta description não encontrada'
 
         except Exception as e:
             title = f'ERROR: {str(e)}'
@@ -36,6 +44,8 @@ def extract_data(urls):
 
         titles.append(title)
         meta_descriptions.append(meta_description)
+
+    driver.quit()
 
     df = pd.DataFrame({
         'URL': urls,

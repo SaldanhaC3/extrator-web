@@ -2,5 +2,6 @@ streamlit
 pandas
 requests
 beautifulsoup4
+selenium
+chromedriver-autoinstaller
 openpyxl
-requests-html
