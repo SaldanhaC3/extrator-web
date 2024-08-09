@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extrator de Títulos e Meta Descriptions</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        p.description {
+            font-size: 16px;
+            color: #555;
+            text-align: justify;
+            margin-top: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            resize: none; /* Impede o redimensionamento */
+        }
+        button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .table-container {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .loading {
+            font-size: 18px;
+            color: #333;
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Extrator de Títulos e Meta Descriptions</h1>
+
+        <p class="description">
+            Esta ferramenta foi desenvolvida para facilitar a extração de títulos e meta descriptions de múltiplas páginas web de forma rápida e eficiente. 
+            Com um foco voltado para profissionais de marketing digital, SEO e desenvolvimento web, este extrator permite que você obtenha informações 
+            valiosas sobre as páginas que deseja analisar. Ao colar as URLs das páginas que você quer explorar, a ferramenta processa cada link, recuperando 
+            os títulos e descrições meta que são essenciais para a otimização dos motores de busca (SEO). Isso economiza tempo e esforço, permitindo que você 
+            foque em otimizar os conteúdos das páginas para melhorar a visibilidade nos resultados de busca. Use esta ferramenta para gerar relatórios rápidos 
+            em formato Excel que podem ser usados para análise, auditoria ou planejamento estratégico.
+        </p>
+
+        <p>Cole as URLs abaixo e clique em <strong>Extrair Informações</strong> para gerar um arquivo Excel com os títulos e meta descriptions.</p>
+        <form id="upload-form" action="/upload" method="post">
+            <textarea id="urls" name="urls" placeholder="Cole as URLs aqui..."></textarea><br>
+            <button type="submit">Extrair Informações</button>
+        </form>
+
+        <div id="loading-message" class="loading" style="display: none;">
+            Extraindo dados, por favor, aguarde...
+        </div>
+
+        {% if message %}
+        <div class="message {{ message_class }}">{{ message }}</div>
+        {% endif %}
+
+        {% if table_html %}
+        <div class="table-container">
+            <h2>Resultados:</h2>
+            {{ table_html | safe }}
+        </div>
+        {% endif %}
+
+        {% if download_ready %}
+        <form action="/download" method="get">
+            <input type="hidden" name="data" value="{{ data }}">
+            <button type="submit">📥 Baixar Resultados</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <script>
+        document.getElementById('upload-form').onsubmit = function() {
+            document.getElementById('loading-message').style.display = 'block';
+        };
+    </script>
+</body>
+</html>
