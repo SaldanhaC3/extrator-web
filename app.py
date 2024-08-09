@@ -71,9 +71,11 @@ if st.button("Extrair Informações"):
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Resultados')
+        buffer.seek(0)  # Mova o ponteiro para o início do arquivo
+
         st.download_button(
             label="📥 Baixar Resultados",
             data=buffer,
             file_name="resultados.xlsx",
-            mime="application/vnd.ms-excel"
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
