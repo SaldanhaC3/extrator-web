@@ -1,11 +1,11 @@
 { pkgs }: {
   deps = [
     pkgs.python310Full
-    pkgs.chromedriver
-    pkgs.chromium
+    pkgs.streamlit
   ];
 
-  preBuild = ''
-    pip install -r requirements.txt
+  # Isso faz com que o Replit rode o Streamlit na porta 8501 automaticamente
+  postBuild = ''
+    streamlit run app.py --server.port 8501
   '';
 }

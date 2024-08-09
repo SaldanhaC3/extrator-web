@@ -1,13 +1,11 @@
-from flask import Flask, request, render_template, send_file, jsonify
+import streamlit as st
 import pandas as pd
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException, WebDriverException
-import io
+import requests
+from bs4 import BeautifulSoup
 from urllib.parse import urlparse
+import io
 
-app = Flask(__name__)
-
+# Função para validar URLs
 def is_valid_url(url):
     try:
         result = urlparse(url)
@@ -15,40 +13,30 @@ def is_valid_url(url):
     except ValueError:
         return False
 
+# Função para extrair dados das URLs
 def extract_data(urls):
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    driver = webdriver.Chrome(options=options)
-
     titles = []
     meta_descriptions = []
 
     for url in urls:
         try:
-            driver.get(url)
-            driver.implicitly_wait(10)
-            title = driver.title
-            try:
-                meta_description = driver.find_element(By.CSS_SELECTOR, "meta[name='description']").get_attribute("content")
-            except:
-                meta_description = 'Meta description não encontrada'
+            response = requests.get(url)
+            response.raise_for_status()  # Verifica se a requisição foi bem-sucedida
+            soup = BeautifulSoup(response.content, 'html.parser')
 
-        except TimeoutException:
-            title = 'ERROR: Timeout ao tentar carregar a página'
-            meta_description = 'N/A'
-        except WebDriverException as e:
-            title = f'ERROR: Problema ao acessar a URL - {str(e)}'
-            meta_description = 'N/A'
-        except Exception as e:
+            # Extrai o título da página
+            title = soup.title.string if soup.title else 'Título não encontrado'
+
+            # Extrai a meta descrição
+            meta = soup.find('meta', attrs={'name': 'description'})
+            meta_description = meta['content'] if meta else 'Meta description não encontrada'
+
+        except requests.exceptions.RequestException as e:
             title = f'ERROR: {str(e)}'
             meta_description = 'N/A'
 
         titles.append(title)
         meta_descriptions.append(meta_description)
-
-    driver.quit()
 
     df = pd.DataFrame({
         'URL': urls,
@@ -58,55 +46,34 @@ def extract_data(urls):
 
     return df
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Interface do Streamlit
+st.title("Extrator de Títulos e Meta Descriptions")
+st.write("""
+    Esta ferramenta permite a extração de títulos e meta descriptions de múltiplas páginas web. 
+    Insira as URLs abaixo para gerar um relatório.
+""")
 
-@app.route('/upload', methods=['POST'])
-def upload():
-    try:
-        urls = request.form['urls'].splitlines()
-        urls = [url.strip() for url in urls if is_valid_url(url.strip())]
+# Entrada de URLs pelo usuário
+urls = st.text_area("Cole as URLs aqui (uma por linha):")
 
-        # Verifique se há URLs válidas
-        if not urls:
-            return render_template('index.html', message="Nenhuma URL válida foi fornecida.", message_class="error")
+if st.button("Extrair Informações"):
+    urls_list = [url.strip() for url in urls.splitlines() if is_valid_url(url.strip())]
 
-        # Limite o número de URLs a 100
-        if len(urls) > 100:
-            return render_template('index.html', message="O limite é de 100 URLs por extração. Você forneceu {} URLs.".format(len(urls)), message_class="error")
+    if len(urls_list) == 0:
+        st.error("Nenhuma URL válida foi fornecida.")
+    elif len(urls_list) > 100:
+        st.error(f"O limite é de 100 URLs por extração. Você forneceu {len(urls_list)} URLs.")
+    else:
+        df = extract_data(urls_list)
+        st.dataframe(df)
 
-        # Extraia os dados das URLs válidas
-        df = extract_data(urls)
-        table_html = df.to_html(classes='table table-striped table-bordered', index=False)
-
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Prepara o arquivo Excel para download
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='Resultados')
-        output.seek(0)
-
-        return render_template('index.html', table_html=table_html, download_ready=True, data=output.getvalue())
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return render_template('index.html', message="Ocorreu um erro ao processar as URLs. Tente novamente.", message_class="error")
-
-@app.route('/download')
-def download():
-    try:
-        data = request.args.get('data')
-        if data:
-            output = io.BytesIO(data.encode())
-            return send_file(output, download_name='resultados.xlsx', as_attachment=True)
-        else:
-            return "Nenhum dado disponível para download.", 400
-    except Exception as e:
-        print(f"Error: {e}")
-        return "Ocorreu um erro ao tentar fazer o download.", 500
-
-@app.route('/check_status', methods=['GET'])
-def check_status():
-    return jsonify(status="extraindo")
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+        st.download_button(
+            label="📥 Baixar Resultados",
+            data=buffer,
+            file_name="resultados.xlsx",
+            mime="application/vnd.ms-excel"
+        )
